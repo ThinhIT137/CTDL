@@ -9,69 +9,100 @@ template<class T>
 
 class BSTSet {
 private:
-    node<T>* root;
+    node<T>* root; // Node gốc
     
-    void add(node<T>*& t, T data) {
-        if (t == NULL) {
-            t = new node<T>(data);
-        } else {
-            if (data < t->data) {
-                add(t->pLeft, data);
-            } else if (data > t->data) {
-                add(t->pRight, data);
+    // Thêm phần tử vào cây mà không dùng đệ quy
+    void add(node<T>*& root, T data) {
+        node<T>* current = root; // Con trỏ hiện tại
+        node<T>* parent = NULL; // Con trỏ cha
+        while (current != NULL) {
+            parent = current;
+            if (data < current->data) {
+                current = current->pLeft;
+            } else if (data > current->data) {
+                current = current->pRight;
+            } else {
+                return;  // Phần tử đã có, không thêm
             }
+        }
+        // Thêm node mới
+        if (parent == NULL) {
+            root = new node<T>(data);  // Thêm vào cây nếu cây rỗng
+        } else if (data < parent->data) {
+            parent->pLeft = new node<T>(data);
+        } else {
+            parent->pRight = new node<T>(data);
         }
     }
 
-    node<T>* remove(node<T>* t, T data) {
-        if (t == NULL) return NULL;
-        if (data < t->data) {
-            t->pLeft = remove(t->pLeft, data);
-        } else if (data > t->data) {
-            t->pRight = remove(t->pRight, data);
-        } else {
-            // Node chỉ có cây con phải
-            if (t->pLeft == NULL) { 
-                node<T>* temp = t->pRight;
-                delete t;
-                return temp;
-            // Node chỉ có cây con trái
-            } else if (t->pRight == NULL) { 
-                node<T>* temp = t->pLeft;
-                delete t;
-                return temp;
+    // Xóa phần tử khỏi cây mà không dùng đệ quy
+    void remove(node<T>*& root, T data) {
+        node<T>* current = root; // Con trỏ hiện tại
+        node<T>* parent = NULL; // Con trỏ cha
+        // Tìm node cần xóa
+        while (current != NULL && current->data != data) {
+            parent = current;
+            if (data < current->data) {
+                current = current->pLeft;
+            } else {
+                current = current->pRight;
             }
-            // Node có cả 2 cây con
-            node<T>* temp = findMin(t->pRight); 
-            t->data = temp->data;
-            t->pRight = remove(t->pRight, temp->data);
         }
-        return t;
+        if (current == NULL) return; // Không tìm thấy phần tử
+        // Trường hợp node có 2 con
+        if (current->pLeft != NULL && current->pRight != NULL) {
+            node<T>* successor = current->pRight; // Node kế tiếp
+            node<T>* successorParent = current; // Cha của node kế tiếp
+            while (successor->pLeft != NULL) {
+                successorParent = successor;
+                successor = successor->pLeft;
+            }
+            current->data = successor->data; // Sao chép giá trị của successor vào current
+            current = successor;
+            parent = successorParent;
+        }
+        // Trường hợp node có 1 hoặc không có con
+        node<T>* child = (current->pLeft != NULL) ? current->pLeft : current->pRight;
+        if (parent == NULL) {
+            root = child; // Nếu node cần xóa là root
+        } else if (current == parent->pLeft) {
+            parent->pLeft = child;
+        } else {
+            parent->pRight = child;
+        }
+        delete current;
     }
 
-    node<T>* findMin(node<T>* t) const {
-        while (t && t->pLeft != NULL) {
-            t = t->pLeft;
+    bool contains(T data) { // Kiểm tra phần tử có trong tập hợp không
+        node<T>* current = root;
+        while (current != NULL) {
+            if (data < current->data) {
+                current = current->pLeft;
+            } else if (data > current->data) {
+                current = current->pRight;
+            } else {
+                return true; // Tìm thấy phần tử
+            }
         }
-        return t;
+        return false; // Không tìm thấy phần tử
     }
     
 public:
     BSTSet() : root(NULL) {}
 
     // Thêm phần tử vào tập hợp
-    void add(T data) { 
-        add(root, data);
+    void add(T data) {
+        if (!contains(data)) {
+            add(root, data); // Thêm vào cây nếu không tồn tại
+        }
     }
 
     // Kiểm tra phần tử có trong tập hợp không
-    bool contains(T data) const { 
-        for (auto it = begin(); it != end(); ++it) {
-            if (*it == data) {
-                return true;
-            }
-        }
-        return false;
+    bool contains(node<T>* t, T data) {
+        if (t == NULL) return false;
+        if (data < t->data) return contains(t->pLeft, data);
+        if (data > t->data) return contains(t->pRight, data);
+        return true; // Nếu tìm thấy
     }
 
     // Xóa phần tử khỏi tập hợp
@@ -79,8 +110,18 @@ public:
         root = remove(root, data);
     }
 
+    // Trả về iterator đầu tiên
+    Iterator<T> begin() { 
+        return Iterator<T>(root);
+    }
+
+    // Trả về iterator cuối cùng
+    Iterator<T> end() { 
+        return Iterator<T>(NULL); // NULL để biết đã hết
+    }
+
     // Hiển thị tập hợp
-    void display() const { 
+    void display() { 
         for (auto it = begin(); it != end(); ++it) {
             cout << *it << " ";
         }
@@ -88,27 +129,17 @@ public:
     }
 
     // Cộng tập này vào tập khác
-    void unionWith(const BSTSet<T>& other) { 
+    void unionWith(BSTSet<T>& other) {
         for (auto it = other.begin(); it != other.end(); ++it) {
-            add(*it);
+            add(*it); // Thêm phần tử từ B vào A nếu chưa có
         }
     }
 
     // Trừ tập này ra
-    void subtractWith(const BSTSet<T>& other) { 
+    void subtractWith(BSTSet<T>& other) {
         for (auto it = other.begin(); it != other.end(); ++it) {
-            remove(*it);
+            remove(root, *it); // Xóa phần tử từ A nếu có trong C
         }
-    }
-
-    // Trả về iterator đầu tiên
-    Iterator<T> begin() const { 
-        return Iterator<T>(root);
-    }
-
-    // Trả về iterator cuối cùng
-    Iterator<T> end() const { 
-        return Iterator<T>(NULL); // NULL để biết đã hết
     }
 };
 

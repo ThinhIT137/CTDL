@@ -11,8 +11,9 @@ template<class T>
 
 class Iterator {
 private:
-    Stack<node<T>*> s; // Stack để duyệt cây
+    Stack<node<T>*> s; // Stack để lưu trữ node
 public:
+    // Khởi tạo với node gốc
     Iterator(node<T>* root) {
         if (root != NULL) {
             s.push(root);
@@ -20,7 +21,7 @@ public:
     }
 
     // Lấy giá trị của node hiện tại
-    T operator*() const{                             
+    T operator*(){                             
         return s.top()->data;                   
     }
 
@@ -40,9 +41,7 @@ public:
     // Kiểm tra xem còn duyệt tiếp không
     bool operator!=(const Iterator& other) {    
         return s.isEmpty() != other.s.isEmpty();
-    }
-
-    
+    } 
 };
 
 #endif
